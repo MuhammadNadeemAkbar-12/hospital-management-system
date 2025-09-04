@@ -95,13 +95,82 @@
 </template>
 
 <script>
-import axios from "@/api/axios";
-
 export default {
   name: "AppointmentApproval",
   data() {
     return {
-      appointments: [],
+      appointments: [
+        {
+          id: 1,
+          patient_name: "Ahmed Ali",
+          date: "2025-09-10",
+          slot: "09:00 AM",
+          status: "Pending"
+        },
+        {
+          id: 2,
+          patient_name: "Fatima Khan",
+          date: "2025-09-10",
+          slot: "10:30 AM",
+          status: "Approved"
+        },
+        {
+          id: 3,
+          patient_name: "Muhammad Hassan",
+          date: "2025-09-11",
+          slot: "02:00 PM",
+          status: "Pending"
+        },
+        {
+          id: 4,
+          patient_name: "Aisha Malik",
+          date: "2025-09-11",
+          slot: "03:30 PM",
+          status: "Rejected"
+        },
+        {
+          id: 5,
+          patient_name: "Usman Ahmed",
+          date: "2025-09-12",
+          slot: "11:00 AM",
+          status: "Pending"
+        },
+        {
+          id: 6,
+          patient_name: "Zainab Sheikh",
+          date: "2025-09-12",
+          slot: "04:00 PM",
+          status: "Approved"
+        },
+        {
+          id: 7,
+          patient_name: "Ali Raza",
+          date: "2025-09-13",
+          slot: "09:30 AM",
+          status: "Pending"
+        },
+        {
+          id: 8,
+          patient_name: "Sara Nawaz",
+          date: "2025-09-13",
+          slot: "01:00 PM",
+          status: "Approved"
+        },
+        {
+          id: 9,
+          patient_name: "Hamza Khan",
+          date: "2025-09-14",
+          slot: "10:00 AM",
+          status: "Pending"
+        },
+        {
+          id: 10,
+          patient_name: "Mariam Butt",
+          date: "2025-09-14",
+          slot: "03:00 PM",
+          status: "Rejected"
+        }
+      ],
       search: "",
       showStatusModal: false,
       statusTarget: {},
@@ -119,35 +188,13 @@ export default {
       );
     },
   },
-  created() {
-    this.fetchAppointments();
-  },
   methods: {
-    async fetchAppointments() {
-      const token = localStorage.getItem("Token");
-      try {
-        const response = await axios.get("/appointments", {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        this.appointments = response.data.data || [];
-      } catch (e) {
-        this.appointments = [];
-      }
-    },
-    async updateStatus(app, status) {
-      const token = localStorage.getItem("Token");
-      try {
-        await axios.patch(
-          `/doctor/appointments/${app.id}/status`,
-          { status },
-          { headers: { Authorization: `Bearer ${token}` } }
-        );
+    updateStatus(app, status) {
+      // Simulate API call with setTimeout for realistic experience
+      setTimeout(() => {
         app.status = status;
         this.showToastMsg(`Appointment ${status.toLowerCase()}!`);
-        this.fetchAppointments();
-      } catch (e) {
-        alert("Error updating status");
-      }
+      }, 500);
     },
     viewStatus(app) {
       this.statusTarget = app;

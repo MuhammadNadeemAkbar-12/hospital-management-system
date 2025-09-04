@@ -5,13 +5,11 @@ import router from './router'
 import store from './store';
 import Toast from "vue-toastification";
 import "vue-toastification/dist/index.css";
-import 'bootstrap/dist/js/bootstrap.bundle.min.js'; 
-import axios from 'axios';
+import 'bootstrap/dist/js/bootstrap.bundle.min.js';
 Vue.config.productionTip = false
 Vue.use(Toast);
 
 new Vue({
-  axios,
   store,
   router,
   render: h => h(App),

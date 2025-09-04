@@ -2,48 +2,331 @@
 
 # Hospital Management System (Frontend - Vue 2)
 
-Simple role-based Hospital Management System UI built with Vue 2, Vue Router,
-Vuex, Axios, Bootstrap 5, and Toast notifications. Currently it uses browser
-localStorage (no secure backend yet) for demo auth and basic flows.
+A comprehensive role-based Hospital Management System UI built with Vue 2, Vue
+Router, Vuex, Bootstrap 5, and Vue Toastification. This system provides separate
+dashboards and functionalities for Admin, Doctor, and Patient roles. Currently
+uses browser localStorage for demo purposes (no secure backend yet).
 
 </div>
 
-## 🚀 Features (Current)
+## 🚀 Features
 
-Roles supported:
+### Roles Supported
 
-- Admin (manage doctors, patients, medicines, billing, approvals)
-- Doctor (appointments, patients list, prescriptions, notifications, schedule)
-- Patient (book appointments, medical reports (UI placeholder), prescriptions,
-  billing, profile update)
+- **Admin**: Manage doctors, patients, medicines, billing, appointments,
+  notifications, and system settings
+- **Doctor**: Handle appointments, patients list, prescriptions, notifications,
+  and schedule management
+- **Patient**: Book appointments, view medical reports, prescriptions, pay
+  bills, and update profile
 
-Implemented / UI Screens:
+### Implemented Features
 
-- Authentication: Register, Login, Logout, Forgot Password (UI only)
-- Dashboards: Admin, Doctor, Patient
-- Appointment booking & approval (Admin approval placeholder)
-- Billing & prescriptions (UI scaffolding)
-- Medicines inventory (UI only)
-- Notifications (Doctor + Admin consolidated view)
-- Local persistence of users + session token via Vuex + localStorage
-- Central Axios instance with interceptors (`src/api/axios.js`)
+#### Authentication
 
-Planned / Potential Enhancements:
+- User Registration with role selection
+- Login with role-based access
+- Logout functionality
+- Forgot Password (UI placeholder)
 
-- Real backend integration (JWT auth, RBAC)
-- Form validation & input sanitization
-- Proper error boundaries & loading states
-- Pagination / search in management tables
-- Audit logs & activity timeline
-- i18n (internationalization)
-- Accessibility pass (WCAG compliance)
+#### Admin Dashboard
+
+- **Patient Management**: Full CRUD operations (Create, Read, Update, Delete)
+  with search functionality
+- **Doctor Management**: Add, view, edit doctors and their specializations
+- **Medicines Inventory**: Manage hospital medicines stock
+- **Billing & Prescriptions**: Handle billing and prescription management
+- **Appointment Approval**: Review and approve appointment requests
+- **Notifications**: View all system notifications
+- **Admin Settings**: System configuration options
+
+#### Doctor Dashboard
+
+- **Appointments**: View and manage doctor appointments
+- **All Patients**: Access to patient list under doctor's care
+- **Prescriptions**: Create and manage patient prescriptions
+- **Schedule Appointments**: Manage doctor's availability and schedules
+- **Notifications**: Doctor-specific notifications
+
+#### Patient Dashboard
+
+- **Book Appointment**: Schedule appointments with doctors
+- **Medical Reports**: View medical history and reports (UI placeholder)
+- **Patient Prescriptions**: View prescribed medications
+- **Pay Bills**: Handle billing and payments
+- **Update Profile**: Manage personal information
+
+### Technical Features
+
+- Responsive design with Bootstrap 5
+- Toast notifications for user feedback
+- Role-based routing and navigation
+- Local storage persistence for demo data
+- Modern UI with icons and animations
+
+## 🧱 Tech Stack
+
+- **Vue 2.6.14** - Progressive JavaScript framework
+- **Vue Router 3.6.5** - Official router for Vue.js
+- **Vuex 3.6.2** - State management pattern and library
+- **Bootstrap 5.3.7** - CSS framework for responsive design
+- **Vue Toastification 1.7.14** - Toast notification plugin
+- **Core-js 3.8.3** - Modular standard library for JavaScript
+
+## 🗂️ Project Structure
+
+```
+hospital-management-system/
+├── src/
+│   ├── main.js                 # App entry point with Vue setup
+│   ├── App.vue                 # Root component with sidebar layout
+│   ├── router/
+│   │   └── index.js            # Route definitions for all pages
+│   ├── store/
+│   │   ├── index.js            # Vuex store configuration
+│   │   └── modules/
+│   │       ├── auth.js         # Authentication state management
+│   │       └── [other].js      # Placeholder modules for future use
+│   ├── services/               # API service layer (placeholders)
+│   ├── components/
+│   │   ├── auth/               # Authentication components
+│   │   ├── admin/              # Admin role components
+│   │   ├── doctors/            # Doctor role components
+│   │   └── patient/            # Patient role components
+│   └── views/
+│       ├── dashboard/          # Dashboard views for each role
+│       └── NotFound.vue        # 404 error page
+├── public/
+│   └── index.html              # Main HTML template
+└── package.json                # Project dependencies and scripts
+```
+
+## 🔐 Authentication (Demo Only)
+
+The authentication system is purely client-side for demonstration:
+
+- **Registration**: Stores users in `localStorage.users` with email, password,
+  and role
+- **Login**: Matches credentials against stored users and sets a demo token
+- **Session**: Token and role persisted in localStorage
+- **Security**: No password hashing or server-side verification
+
+**⚠️ Not secure for production use**
+
+## 🧩 Routing Overview
+
+All routes are defined in `src/router/index.js` with history mode:
+
+### Authentication Routes
+
+- `/` - Login page
+- `/register-user` - User registration
+- `/forgot-password` - Password recovery (UI only)
+
+### Admin Routes
+
+- `/admin-dashboard` - Admin dashboard
+- `/patient-management` - Patient CRUD operations
+- `/doctor-management` - Doctor management
+- `/medicines-inventory` - Medicine stock management
+- `/billing-prescriptions` - Billing and prescriptions
+- `/appointment-calendar` - Appointment approval
+- `/notifications-all` - System notifications
+- `/admin-settings` - Admin configuration
+
+### Doctor Routes
+
+- `/doctor-dashboard` - Doctor dashboard
+- `/doctor-apppoinment` - Doctor appointments
+- `/all-patients` - Patient list
+- `/prescriptions-data` - Prescription management
+- `/schedule-appoinment` - Appointment scheduling
+- `/doctor-notification` - Doctor notifications
+
+### Patient Routes
+
+- `/patient-dashboard` - Patient dashboard
+- `/book-appointment` - Appointment booking
+- `/medical-reports` - Medical reports
+- `/patient-prescriptions` - View prescriptions
+- `/pay-bills` - Bill payment
+- `/update-profile` - Profile management
+
+**Note**: No navigation guards implemented yet - any user can access any route
+manually.
+
+## 🛠️ Setup & Installation
+
+### Prerequisites
+
+- Node.js 16+ (recommended)
+- npm 8+
+
+### Installation
+
+```bash
+# Clone the repository
+git clone <repository-url>
+cd hospital-management-system
+
+# Install dependencies
+npm install
+```
+
+### Development Server
+
+```bash
+# Start development server
+npm run serve
+```
+
+App will be available at: `http://localhost:8080`
+
+### Production Build
+
+```bash
+# Build for production
+npm run build
+```
+
+Output will be in the `dist/` directory.
+
+### Linting
+
+```bash
+# Run ESLint
+npm run lint
+```
+
+## 🗄️ State Management (Vuex)
+
+### Active Module
+
+- **auth**: Handles authentication state, user registration, login, and logout
+
+### Placeholder Modules
+
+The following modules exist but are not yet implemented:
+
+- appointments.js
+- billing.js
+- doctors.js
+- medicines.js
+- notifications.js
+- patients.js
+
+These can be activated and integrated as the backend API is developed.
+
+## 🔒 Environment Variables (Future Setup)
+
+For production-grade deployment, create a `.env` file:
+
+```env
+VUE_APP_API_BASE_URL=https://your-api.example.com/api
+VUE_APP_ENV=development
+```
+
+## 🧪 Testing (Not Implemented Yet)
+
+Suggested testing stack:
+
+- **Unit Tests**: Jest + vue-jest for component testing
+- **E2E Tests**: Cypress or Playwright for end-to-end testing
+- **CI/CD**: GitHub Actions for automated testing
+
+## 🧾 Deployment
+
+### Static Hosting
+
+The app can be deployed to any static hosting service:
+
+1. **Build the project**:
+
+   ```bash
+   npm run build
+   ```
+
+2. **Deploy the `dist/` directory** to:
+
+   - Vercel
+   - Netlify
+   - AWS S3 + CloudFront
+   - GitHub Pages
+
+3. **Configure routing**: Ensure the server redirects all routes to
+   `/index.html` for SPA routing to work properly.
+
+### Example: Vercel Deployment
+
+- Connect your repository to Vercel
+- Vercel will automatically detect the Vue.js project
+- The `vercel.json` can be configured for custom routing if needed
+
+## 🚨 Security Considerations
+
+**This implementation is for demonstration only:**
+
+- ❌ No server-side authentication
+- ❌ Sensitive data stored in localStorage
+- ❌ No CSRF/XSS protection
+- ❌ No password encryption
+- ❌ Open routing without role-based guards
+
+**Do NOT use in production without proper security measures.**
+
+## 🧭 Roadmap & Future Enhancements
+
+### High Priority
+
+- [ ] Implement navigation guards with role-based access control
+- [ ] Add form validation and input sanitization
+- [ ] Integrate real backend API
+- [ ] Add loading states and error boundaries
+
+### Medium Priority
+
+- [ ] Implement remaining Vuex modules
+- [ ] Add pagination and search in data tables
+- [ ] Implement audit logs and activity tracking
+- [ ] Add i18n (internationalization)
+
+### Low Priority
+
+- [ ] Add accessibility improvements (WCAG compliance)
+- [ ] Implement code splitting and lazy loading
+- [ ] Add Sentry for error monitoring
+- [ ] Performance optimizations
+
+## 🤝 Contributing
+
+1. Fork the repository
+2. Create a feature branch: `git checkout -b feature/your-feature`
+3. Make your changes and commit: `git commit -m "feat: add your feature"`
+4. Push to your branch: `git push origin feature/your-feature`
+5. Open a Pull Request
+
+Please follow conventional commit format and ensure all tests pass.
+
+## 📄 License
+
+This project is currently unlicensed. Consider adding an appropriate license
+(MIT recommended) for open-source distribution.
+
+## 🙋 Support & Questions
+
+- Open an issue for bugs or feature requests
+- Check existing issues before creating new ones
+- For questions, please use the discussions section
+
+---
+
+Built with ❤️ using Vue 2, Bootstrap 5, and modern web technologies.
 
 ## 🧱 Tech Stack
 
 - Vue 2.6
 - Vue Router (history mode)
 - Vuex (module based, currently only `auth` active)
-- Axios (custom instance + interceptors)
 - Bootstrap 5 (styling & layout)
 - Vue Toastification (notifications)
 
@@ -52,7 +335,6 @@ Planned / Potential Enhancements:
 ```
 hospital-management-system/
 	src/
-		api/axios.js           # Axios instance with base URL + interceptors
 		main.js                # App bootstrap
 		router/index.js        # Route definitions (all role routes)
 		store/                 # Vuex (only auth module wired)
@@ -119,19 +401,6 @@ Lint:
 ```bash
 npm run lint
 ```
-
-## 🌐 API Layer
-
-`src/api/axios.js` sets `baseURL` currently pointing to:
-`http://16.171.47.239/api` (replace for your backend).
-
-Interceptors ready for:
-
-- Attaching Authorization headers
-- Global error handling (401, 403, 500, etc.)
-
-To use globally, either import the instance or configure a Vue plugin wrapper
-(future enhancement). Currently raw axios may also be used from components.
 
 ## 🗄️ State Management (Vuex)
 

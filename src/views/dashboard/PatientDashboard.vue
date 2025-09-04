@@ -187,8 +187,6 @@
 </template>
 
 <script>
-	import axios from "axios";
-
 	export default {
 		name: "PatientDashboard",
 
@@ -228,38 +226,31 @@
 				this.$router.push(`/book-appointment/${id}`);
 			},
 			async fetchUserInfo() {
-				const token = localStorage.getItem("Token");
-				let user = null;
-				if (token) {
-					try {
-						const response = await axios.get("/me", {
-							headers: { Authorization: `Bearer ${token}` },
-						});
-						if (response.data && response.data.data) {
-							user = response.data.data;
-							localStorage.setItem("User", JSON.stringify(response.data.data));
-							localStorage.setItem("Token", response.data.token);
-						}
-					} catch (e) {
-						user = null;
-					}
-				}
-				// Agar API fail ho toh localStorage se user info lo
-				if (!user) {
-					const localUser = localStorage.getItem("User");
-					user = localUser ? JSON.parse(localUser) : null;
+				// Dummy user data
+				let user = {
+					name: "John Doe",
+					email: "john.doe@example.com",
+					role: "patient",
+				};
+				// Agar localStorage mein hai toh use karo
+				const localUser = localStorage.getItem("User");
+				if (localUser) {
+					user = JSON.parse(localUser);
 				}
 				this.user = user;
 				console.log("User Info:", this.user); // Debug line
 			},
 		},
 		async mounted() {
-			const token = localStorage.getItem("Token");
-			const response = await axios.get("/profile", {
-				headers: { Authorization: `Bearer ${token}` },
-			});
-			console.log("Patient Dashboard API Response:", response.data);
-			this.patient = response.data.data; // Assign only the object, not the whole response
+			// Dummy patient data
+			this.patient = {
+				name: "John Doe",
+				age: 30,
+				bloodGroup: "O+",
+				phone: "+1234567890",
+				address: "123 Main St, City, Country",
+			};
+			console.log("Patient Dashboard Dummy Data:", this.patient);
 		},
 	};
 </script>

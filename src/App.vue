@@ -13,7 +13,7 @@
 			:class="{ 'sidebar-collapsed': !sidebarOpen }">
 			<div class="sidebar-header">
 				<i class="bi bi-hospital fs-3"></i>
-				<span class="fs-4 fw-bold">Hospital Panel</span>
+				<span class="fs-4 fw-bold">MediCare Panel</span>
 			</div>
 			<ul class="sidebar-menu">
 				<li
@@ -26,12 +26,13 @@
 			</ul>
 			<div class="sidebar-footer">
 				<div class="user-info">
-					<div class="user-avatar">
-						<i class="bi bi-person-circle"></i>
+					<div class="user-avatar" :class="userAvatarClass">
+						<i :class="userAvatarIcon"></i>
 					</div>
 					<div class="user-details">
 						<div class="user-name">{{ userName }}</div>
 						<div class="user-role">{{ userRole }}</div>
+						<div class="user-id" v-if="user && user.id">ID: {{ user.id.substring(0, 8) }}</div>
 					</div>
 				</div>
 				<button class="logout-btn-footer" @click="logout">
@@ -46,27 +47,45 @@
 </template>
 
 <script>
-	import axios from "@/api/axios";
-
 	export default {
 		name: "App",
 		data() {
 			return {
 				sidebarOpen: true,
 				user: null, // User info yahan store hogi
+				loadingUser: false,
 			};
 		},
 		computed: {
 			userName() {
-				return this.user && this.user.name ? this.user.name : "User";
+				return this.user && this.user.name ? this.user.name : "Guest User";
 			},
 			userRole() {
-				return this.user && this.user.role
-					? this.user.role.charAt(0).toUpperCase() + this.user.role.slice(1)
-					: "Patient";
+				if (!this.user || !this.user.role) return "Guest";
+				return this.user.role.charAt(0).toUpperCase() + this.user.role.slice(1);
+			},
+			userAvatarClass() {
+				if (!this.user || !this.user.role) return 'guest-avatar';
+				switch(this.user.role) {
+					case 'admin': return 'admin-avatar';
+					case 'doctor': return 'doctor-avatar';
+					case 'patient': return 'patient-avatar';
+					default: return 'guest-avatar';
+				}
+			},
+			userAvatarIcon() {
+				if (!this.user || !this.user.role) return 'bi bi-person-circle';
+				switch(this.user.role) {
+					case 'admin': return 'bi bi-person-gear';
+					case 'doctor': return 'bi bi-person-badge';
+					case 'patient': return 'bi bi-person-heart';
+					default: return 'bi bi-person-circle';
+				}
 			},
 			sidebarMenu() {
-				if (this.user && this.user.role === "patient") {
+				if (!this.user || !this.user.role) return [];
+				
+				if (this.user.role === "patient") {
 					return [
 						{
 							label: "Dashboard",
@@ -99,10 +118,10 @@
 							icon: "bi bi-person-gear",
 						},
 					];
-				} else if (this.user && this.user.role === "doctor") {
+				} else if (this.user.role === "doctor") {
 					return [
 						{
-							label: "Home",
+							label: "Dashboard",
 							route: "/doctor-dashboard",
 							icon: "bi bi-house-door",
 						},
@@ -112,9 +131,9 @@
 							icon: "bi bi-calendar-check",
 						},
 						{
-							label: "Patients",
+							label: "My Patients",
 							route: "/all-patients",
-							icon: "bi bi-file-earmark-medical",
+							icon: "bi bi-people",
 						},
 						{
 							label: "Prescriptions",
@@ -131,14 +150,15 @@
 							route: "/doctor-notification",
 							icon: "bi bi-bell",
 						},
+						
 					];
-				} else {
+				} else if (this.user.role === "admin") {
 					// Admin sidebar menu
 					return [
 						{
 							label: "Admin Dashboard",
 							route: "/admin-dashboard",
-							icon: "bi bi-house-door",
+							icon: "bi bi-speedometer2",
 						},
 						{
 							label: "Patient Management",
@@ -151,11 +171,10 @@
 							icon: "bi bi-person-badge",
 						},
 						{
-							label: "Appoinment Management",
-							route: "/appointment-calendar", // <-- unique route
-							icon: "bi bi-person-badge",
+							label: "Appointment Management",
+							route: "/appointment-calendar",
+							icon: "bi bi-calendar3",
 						},
-
 						{
 							label: "Medicines Inventory",
 							route: "/medicines-inventory",
@@ -166,23 +185,30 @@
 							route: "/billing-prescriptions",
 							icon: "bi bi-receipt",
 						},
+						// {
+						// 	label: "Reports & Analytics",
+						// 	route: "/admin-reports",
+						// 	icon: "bi bi-graph-up",
+						// },
 						{
 							label: "Notifications",
 							route: "/notifications-all",
 							icon: "bi bi-bell",
 						},
 						{
-							label: "Settings",
+							label: "System Settings",
 							route: "/admin-settings",
 							icon: "bi bi-gear",
 						},
 					];
 				}
+				
+				return [];
 			},
 			showSidebar() {
-				// Only show sidebar on dashboard routes
+				// Only show sidebar on dashboard routes (when user is logged in)
 				const noSidebarRoutes = ["/", "/register-user", "/forgot-password"];
-				return !noSidebarRoutes.includes(this.$route.path);
+				return !noSidebarRoutes.includes(this.$route.path) && this.user;
 			},
 		},
 		watch: {
@@ -192,42 +218,167 @@
 			},
 		},
 		methods: {
-			async fetchUserInfo() {
-				const token = localStorage.getItem("Token");
-				let user = null;
-				if (token) {
-					try {
-						const response = await axios.get("/profile", {
-							headers: { Authorization: `Bearer ${token}` },
-						});
-						if (response.data && response.data.data) {
-							user = response.data.data;
-							localStorage.setItem("User", JSON.stringify(user));
+			fetchUserInfo() {
+				this.loadingUser = true;
+				
+				try {
+					// Get user info from localStorage (set during login)
+					const currentUser = localStorage.getItem('medicare_current_user');
+					const authToken = localStorage.getItem('medicare_auth_token');
+					
+					if (currentUser && authToken) {
+						this.user = JSON.parse(currentUser);
+						console.log('User Info Loaded:', this.user);
+					} else {
+						// No user session found
+						this.user = null;
+						console.log('No user session found');
+						
+						// Redirect to login if on a dashboard route
+						const dashboardRoutes = [
+							'/admin-dashboard', '/patient-dashboard', '/doctor-dashboard',
+							'/patient-management', '/doctor-management', '/appointment-calendar',
+							'/medicines-inventory', '/billing-prescriptions',
+							'/notifications-all', '/admin-settings', '/book-appointment',
+							'/medical-reports', '/patient-prescriptions', '/pay-bills',
+							'/update-profile', '/doctor-apppoinment', '/all-patients',
+							'/prescriptions-data', '/schedule-appoinment', '/doctor-notification',
+							'/doctor-profile'
+						];
+						
+						if (dashboardRoutes.some(route => this.$route.path.startsWith(route))) {
+							this.$router.push('/');
 						}
-					} catch (e) {
-						user = null;
 					}
+				} catch (error) {
+					console.error('Error loading user info:', error);
+					this.user = null;
+				} finally {
+					this.loadingUser = false;
 				}
-				if (!user) {
-					const localUser = localStorage.getItem("User");
-					user = localUser ? JSON.parse(localUser) : null;
-				}
-				this.user = user;
-				console.log("User Info:", this.user); // Debug
 			},
+			
 			logout() {
-				localStorage.removeItem("Token");
+				// Clear all localStorage data
+				localStorage.removeItem('medicare_current_user');
+				localStorage.removeItem('medicare_auth_token');
+				localStorage.removeItem('medicare_user_role');
+				localStorage.removeItem('Token'); // Legacy token key
+				localStorage.removeItem('User'); // Legacy user key
+				
+				// Update logout statistics
+				this.updateLogoutStats();
+				
+				// Clear user data
 				this.user = null;
+				
+				// Show logout message
+				alert(`Goodbye, ${this.userName}! You have been logged out successfully.`);
+				
+				// Redirect to login page
 				this.$router.push("/");
 			},
+			
+			updateLogoutStats() {
+				if (this.user) {
+					const stats = JSON.parse(localStorage.getItem('medicare_stats') || '{}');
+					const today = new Date().toDateString();
+					
+					stats.totalLogouts = (stats.totalLogouts || 0) + 1;
+					stats.logoutsByDate = stats.logoutsByDate || {};
+					stats.logoutsByDate[today] = (stats.logoutsByDate[today] || 0) + 1;
+					stats.logoutsByRole = stats.logoutsByRole || {};
+					stats.logoutsByRole[this.user.role] = (stats.logoutsByRole[this.user.role] || 0) + 1;
+					
+					localStorage.setItem('medicare_stats', JSON.stringify(stats));
+				}
+			},
+			
+			// Check if user has permission for current route
+			checkRoutePermission() {
+				if (!this.user) return false;
+				
+				const currentPath = this.$route.path;
+				
+				// Admin can access all routes
+				if (this.user.role === 'admin') return true;
+				
+				// Doctor specific routes
+				if (this.user.role === 'doctor') {
+					const doctorRoutes = [
+						'/doctor-dashboard', '/doctor-apppoinment', '/all-patients',
+						'/prescriptions-data', '/schedule-appoinment', '/doctor-notification'
+					];
+					return doctorRoutes.some(route => currentPath.startsWith(route));
+				}
+				
+				// Patient specific routes
+				if (this.user.role === 'patient') {
+					const patientRoutes = [
+						'/patient-dashboard', '/book-appointment', '/medical-reports',
+						'/patient-prescriptions', '/pay-bills', '/update-profile'
+					];
+					return patientRoutes.some(route => currentPath.startsWith(route));
+				}
+				
+				return false;
+			},
+			
+			// Get session duration
+			getSessionDuration() {
+				if (this.user && this.user.loginTime) {
+					const loginTime = new Date(this.user.loginTime);
+					const currentTime = new Date();
+					const diffMs = currentTime - loginTime;
+					const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+					const diffMinutes = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
+					return `${diffHours}h ${diffMinutes}m`;
+				}
+				return 'N/A';
+			}
 		},
+		
 		mounted() {
 			this.sidebarOpen = window.innerWidth > 768;
 			this.fetchUserInfo();
+			
+			// Handle window resize
 			window.addEventListener("resize", () => {
 				this.sidebarOpen = window.innerWidth > 768;
 			});
+			
+			// Check route permission
+			if (!this.checkRoutePermission() && this.user) {
+				console.log('Access denied for current route');
+				// Redirect to appropriate dashboard
+				switch(this.user.role) {
+					case 'admin':
+						this.$router.push('/admin-dashboard');
+						break;
+					case 'doctor':
+						this.$router.push('/doctor-dashboard');
+						break;
+					case 'patient':
+						this.$router.push('/patient-dashboard');
+						break;
+					default:
+						this.$router.push('/');
+				}
+			}
+			
+			// Debug info
+			console.log('App mounted, session duration:', this.getSessionDuration());
 		},
+		
+		// Before route change
+		beforeRouteUpdate(to, from, next) {
+			if (this.checkRoutePermission()) {
+				next();
+			} else {
+				console.log('Route access denied');
+				next(false);
+			}
+		}
 	};
 </script>
 
@@ -235,7 +386,7 @@
 	@import url("https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css");
 	@import url("https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600&display=swap");
 
-	cdbody {
+	body {
 		font-family: "Poppins", sans-serif;
 		background-color: #f8f9fa;
 	}
@@ -258,7 +409,6 @@
 		transition: all 0.3s ease;
 		z-index: 1000;
 		position: relative;
-		/* height: 100vh; */
 	}
 
 	.sidebar-header {
@@ -274,6 +424,7 @@
 		padding: 0;
 		margin-top: 20px;
 		flex: 1;
+		overflow-y: auto;
 	}
 
 	.sidebar-menu li {
@@ -331,13 +482,28 @@
 		width: 2.5rem;
 		height: 2.5rem;
 		border-radius: 50%;
-		background: linear-gradient(135deg, #38bdf8 0%, #2563eb 100%);
 		display: flex;
 		align-items: center;
 		justify-content: center;
 		font-size: 1.35rem;
 		color: #fff;
 		box-shadow: 0 2px 8px rgba(30, 58, 138, 0.1);
+	}
+
+	.admin-avatar {
+		background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+	}
+
+	.doctor-avatar {
+		background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+	}
+
+	.patient-avatar {
+		background: linear-gradient(135deg, #38bdf8 0%, #2563eb 100%);
+	}
+
+	.guest-avatar {
+		background: linear-gradient(135deg, #6b7280 0%, #4b5563 100%);
 	}
 
 	.user-details {
@@ -355,6 +521,13 @@
 		font-size: 0.8rem;
 		opacity: 0.85;
 		color: #e0e7ff;
+	}
+
+	.user-id {
+		font-size: 0.7rem;
+		opacity: 0.7;
+		color: #cbd5e1;
+		margin-top: 2px;
 	}
 
 	.logout-btn-footer {
@@ -378,6 +551,7 @@
 		position: relative;
 		overflow: hidden;
 	}
+	
 	.logout-btn-footer::after {
 		content: "";
 		position: absolute;
@@ -389,12 +563,14 @@
 		transition: width 0.3s;
 		z-index: 1;
 	}
+	
 	.logout-btn-footer:hover {
 		background: linear-gradient(90deg, #ef4444 0%, #f87171 100%);
 		color: #fff;
 		box-shadow: 0 4px 12px rgba(239, 68, 68, 0.13);
 		transform: translateY(-2px) scale(1.03);
 	}
+	
 	.logout-btn-footer:hover::after {
 		width: 100%;
 	}

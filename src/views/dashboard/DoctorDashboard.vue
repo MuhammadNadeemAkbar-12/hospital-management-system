@@ -76,8 +76,6 @@
 </template>
 
 <script>
-	import axios from "@/api/axios"; // <-- Add this line
-
 	export default {
 		name: "DoctorDashboard",
 		data() {
@@ -95,24 +93,17 @@
 		},
 		async fetchUserInfo() {
 			this.loadingUser = true; // Start loading
-			const token = localStorage.getItem("Token");
-			let user = null;
-			if (token) {
-				try {
-					const response = await axios.get("/profile", {
-						headers: { Authorization: `Bearer ${token}` },
-					});
-					if (response.data && response.data.data) {
-						user = response.data.data;
-						localStorage.setItem("User", JSON.stringify(user));
-					}
-				} catch (e) {
-					user = null;
-				}
-			}
-			if (!user) {
-				const localUser = localStorage.getItem("User");
-				user = localUser ? JSON.parse(localUser) : null;
+			// Dummy user data
+			let user = {
+				name: "Dr. Smith",
+				email: "dr.smith@example.com",
+				role: "doctor",
+				specialization: "Cardiology",
+			};
+			// Agar localStorage mein hai toh use karo
+			const localUser = localStorage.getItem("User");
+			if (localUser) {
+				user = JSON.parse(localUser);
 			}
 			this.user = user;
 			this.loadingUser = false; // Done loading

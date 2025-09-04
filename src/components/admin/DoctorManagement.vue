@@ -22,7 +22,9 @@
 							<th>ID</th>
 							<th>Name</th>
 							<th>Email</th>
+							<th>Phone</th>
 							<th>Specialization</th>
+							<th>Experience</th>
 							<th>Created At</th>
 							<th>Actions</th>
 						</tr>
@@ -32,7 +34,13 @@
 							<td>{{ doctor.id }}</td>
 							<td>{{ doctor.name }}</td>
 							<td>{{ doctor.email }}</td>
-							<td>{{ doctor.specialization || "-" }}</td>
+							<td>{{ doctor.phone || "-" }}</td>
+							<td>
+								<span class="dm-badge-specialization">
+									{{ getSpecializationName(doctor.specialization_id) }}
+								</span>
+							</td>
+							<td>{{ doctor.experience }} years</td>
 							<td>{{ formatDate(doctor.created_at) }}</td>
 							<td>
 								<button class="dm-action-btn" @click="editDoctor(doctor)">
@@ -44,7 +52,7 @@
 							</td>
 						</tr>
 						<tr v-if="filteredDoctors.length === 0">
-							<td colspan="6" class="dm-empty-row">No doctors found.</td>
+							<td colspan="8" class="dm-empty-row">No doctors found.</td>
 						</tr>
 					</tbody>
 				</table>
@@ -71,6 +79,14 @@
 								class="form-control" />
 						</div>
 						<div class="form-group">
+							<label>Phone</label>
+							<input
+								v-model="form.phone"
+								type="text"
+								required
+								class="form-control" />
+						</div>
+						<div class="form-group">
 							<label>Specialization</label>
 							<select
 								v-model="form.specialization_id"
@@ -86,10 +102,29 @@
 							</select>
 						</div>
 						<div class="form-group">
-							<label>Phone</label>
+							<label>Experience (Years)</label>
 							<input
-								v-model="form.phone"
+								v-model.number="form.experience"
+								type="number"
+								min="0"
+								max="50"
+								required
+								class="form-control" />
+						</div>
+						<div class="form-group">
+							<label>Qualification</label>
+							<input
+								v-model="form.qualification"
 								type="text"
+								placeholder="e.g., MBBS, MD"
+								required
+								class="form-control" />
+						</div>
+						<div class="form-group" v-if="!editMode">
+							<label>Password</label>
+							<input
+								v-model="form.password"
+								type="password"
 								required
 								class="form-control" />
 						</div>
@@ -112,144 +147,221 @@
 </template>
 
 <script>
-	import axios from "@/api/axios";
-
-	export default {
-		name: "DoctorManagement",
-		data() {
-			return {
-				doctors: [],
-				specializations: [],
-				search: "",
-				showForm: false,
-				editMode: false,
-				form: {
-					id: null,
-					name: "",
-					email: "",
-					specialization_id: null,
-					phone: "",
-					password: "",
+export default {
+	name: "DoctorManagement",
+	data() {
+		return {
+			doctors: [
+				{
+					id: 1,
+					name: "Dr. Muhammad Ali Khan",
+					email: "dr.ali@hospital.com",
+					phone: "+92-300-1111111",
+					specialization_id: 1,
+					experience: 8,
+					qualification: "MBBS, MD (Cardiology)",
+					created_at: "2024-01-10T09:00:00Z"
 				},
+				{
+					id: 2,
+					name: "Dr. Sarah Ahmed",
+					email: "dr.sarah@hospital.com",
+					phone: "+92-301-2222222",
+					specialization_id: 2,
+					experience: 6,
+					qualification: "MBBS, MS (Dermatology)",
+					created_at: "2024-01-15T11:30:00Z"
+				},
+				{
+					id: 3,
+					name: "Dr. Ahmed Hassan",
+					email: "dr.hassan@hospital.com",
+					phone: "+92-302-3333333",
+					specialization_id: 3,
+					experience: 12,
+					qualification: "MBBS, FCPS (Orthopedics)",
+					created_at: "2024-01-20T14:15:00Z"
+				},
+				{
+					id: 4,
+					name: "Dr. Fatima Malik",
+					email: "dr.fatima@hospital.com",
+					phone: "+92-303-4444444",
+					specialization_id: 4,
+					experience: 10,
+					qualification: "MBBS, FCPS (Gynecology)",
+					created_at: "2024-02-01T10:20:00Z"
+				},
+				{
+					id: 5,
+					name: "Dr. Omar Sheikh",
+					email: "dr.omar@hospital.com",
+					phone: "+92-304-5555555",
+					specialization_id: 5,
+					experience: 5,
+					qualification: "MBBS, FCPS (Pediatrics)",
+					created_at: "2024-02-05T16:45:00Z"
+				},
+				{
+					id: 6,
+					name: "Dr. Aisha Rahman",
+					email: "dr.aisha@hospital.com",
+					phone: "+92-305-6666666",
+					specialization_id: 6,
+					experience: 15,
+					qualification: "MBBS, FCPS (Neurology)",
+					created_at: "2024-02-10T08:30:00Z"
+				}
+			],
+			specializations: [
+				{ id: 1, name: "Cardiology" },
+				{ id: 2, name: "Dermatology" },
+				{ id: 3, name: "Orthopedics" },
+				{ id: 4, name: "Gynecology" },
+				{ id: 5, name: "Pediatrics" },
+				{ id: 6, name: "Neurology" },
+				{ id: 7, name: "General Medicine" },
+				{ id: 8, name: "Surgery" },
+				{ id: 9, name: "Psychiatry" },
+				{ id: 10, name: "Radiology" }
+			],
+			search: "",
+			showForm: false,
+			editMode: false,
+			form: {
+				id: null,
+				name: "",
+				email: "",
+				phone: "",
+				specialization_id: "",
+				experience: 0,
+				qualification: "",
+				password: "",
+			},
+			nextId: 7 // For generating new IDs
+		};
+	},
+	computed: {
+		filteredDoctors() {
+			if (!this.search) return this.doctors;
+			const s = this.search.toLowerCase();
+			return this.doctors.filter(
+				(d) =>
+					d.name.toLowerCase().includes(s) ||
+					d.email.toLowerCase().includes(s) ||
+					this.getSpecializationName(d.specialization_id).toLowerCase().includes(s)
+			);
+		},
+	},
+	methods: {
+		getSpecializationName(specId) {
+			const spec = this.specializations.find(s => s.id === specId);
+			return spec ? spec.name : "-";
+		},
+		editDoctor(doctor) {
+			this.form = {
+				id: doctor.id,
+				name: doctor.name,
+				email: doctor.email,
+				phone: doctor.phone,
+				specialization_id: doctor.specialization_id,
+				experience: doctor.experience,
+				qualification: doctor.qualification,
+				password: "",
+			};
+			this.editMode = true;
+			this.showForm = true;
+		},
+		saveDoctor() {
+			try {
+				// Check if email already exists (except for current doctor in edit mode)
+				const emailExists = this.doctors.some(d => 
+					d.email === this.form.email && 
+					(!this.editMode || d.id !== this.form.id)
+				);
+				
+				if (emailExists) {
+					alert("Email already exists!");
+					return;
+				}
+
+				// Validate experience
+				if (this.form.experience < 0 || this.form.experience > 50) {
+					alert("Experience should be between 0 and 50 years!");
+					return;
+				}
+
+				if (this.editMode) {
+					// Update existing doctor
+					const doctorIndex = this.doctors.findIndex(d => d.id === this.form.id);
+					if (doctorIndex !== -1) {
+						this.doctors[doctorIndex] = {
+							...this.doctors[doctorIndex],
+							name: this.form.name,
+							email: this.form.email,
+							phone: this.form.phone,
+							specialization_id: parseInt(this.form.specialization_id),
+							experience: this.form.experience,
+							qualification: this.form.qualification
+						};
+					}
+				} else {
+					// Add new doctor
+					if (!this.form.password) {
+						alert("Password is required for new doctor!");
+						return;
+					}
+
+					const newDoctor = {
+						id: this.nextId++,
+						name: this.form.name,
+						email: this.form.email,
+						phone: this.form.phone,
+						specialization_id: parseInt(this.form.specialization_id),
+						experience: this.form.experience,
+						qualification: this.form.qualification,
+						created_at: new Date().toISOString()
+					};
+					this.doctors.push(newDoctor);
+				}
+
+				this.closeForm();
+				alert(this.editMode ? "Doctor updated successfully!" : "Doctor added successfully!");
+			} catch (e) {
+				console.error("Save Doctor Error:", e);
+				alert("Error saving doctor");
+			}
+		},
+		deleteDoctor(doctor) {
+			if (confirm(`Are you sure you want to delete Dr. ${doctor.name}?`)) {
+				const doctorIndex = this.doctors.findIndex(d => d.id === doctor.id);
+				if (doctorIndex !== -1) {
+					this.doctors.splice(doctorIndex, 1);
+					alert("Doctor deleted successfully!");
+				}
+			}
+		},
+		closeForm() {
+			this.showForm = false;
+			this.editMode = false;
+			this.form = {
+				id: null,
+				name: "",
+				email: "",
+				phone: "",
+				specialization_id: "",
+				experience: 0,
+				qualification: "",
+				password: "",
 			};
 		},
-		computed: {
-			filteredDoctors() {
-				if (!this.search) return this.doctors;
-				const s = this.search.toLowerCase();
-				return this.doctors.filter(
-					(d) =>
-						d.name.toLowerCase().includes(s) ||
-						d.email.toLowerCase().includes(s) ||
-						(d.specialization && d.specialization.toLowerCase().includes(s))
-				);
-			},
+		formatDate(dateStr) {
+			if (!dateStr) return "-";
+			const d = new Date(dateStr);
+			return d.toLocaleDateString() + " " + d.toLocaleTimeString();
 		},
-		created() {
-			this.fetchDoctors();
-			this.fetchSpecializations();
-		},
-		methods: {
-			async fetchDoctors() {
-				try {
-					const token = localStorage.getItem("Token");
-					const response = await axios.get("/admin/doctors", {
-						headers: { Authorization: `Bearer ${token}` },
-					});
-					this.doctors = response.data.data || [];
-				} catch (e) {
-					this.doctors = [];
-				}
-			},
-			async fetchSpecializations() {
-				try {
-					const token = localStorage.getItem("Token");
-					const response = await axios.get("/admin/specializations", {
-						headers: { Authorization: `Bearer ${token}` },
-					});
-					this.specializations = response.data.data || [];
-				} catch (e) {
-					this.specializations = [];
-				}
-			},
-			editDoctor(doctor) {
-				this.form = {
-					id: doctor.id,
-					name: doctor.name,
-					email: doctor.email,
-					specialization_id: doctor.specialization_id,
-					phone: doctor.phone,
-				};
-				this.editMode = true;
-				this.showForm = true;
-			},
-			async saveDoctor() {
-				const token = localStorage.getItem("Token");
-				try {
-					if (this.editMode) {
-						// Edit ke liye FormData (agar backend Laravel hai)
-						const formData = new FormData();
-						formData.append("name", this.form.name);
-						formData.append("email", this.form.email);
-						formData.append("specialization_id", this.form.specialization_id);
-						formData.append("phone", this.form.phone);
-						formData.append("_method", "PUT");
-						await axios.post(`/admin/doctors/${this.form.id}`, formData, {
-							headers: { Authorization: `Bearer ${token}` },
-						});
-					} else {
-						// Add ke liye simple object bhejein
-						await axios.post(
-							"/admin/doctors",
-							{
-								name: this.form.name,
-								email: this.form.email,
-								specialization_id: this.form.specialization_id,
-								phone: this.form.phone,
-								password: this.form.password, // Make sure this is not blank!
-							},
-							{
-								headers: { Authorization: `Bearer ${token}` },
-							}
-						);
-					}
-					this.fetchDoctors();
-					this.closeForm();
-				} catch (e) {
-					alert("Error saving doctor");
-					console.log("Add Doctor Error:", e.response?.data || e.message);
-				}
-			},
-			async deleteDoctor(doctor) {
-				const token = localStorage.getItem("Token");
-				try {
-					await axios.delete(`/admin/doctors/${doctor.id}`, {
-						headers: { Authorization: `Bearer ${token}` },
-					});
-					this.fetchDoctors();
-				} catch (e) {
-					alert("Error deleting doctor");
-				}
-			},
-			closeForm() {
-				this.showForm = false;
-				this.editMode = false;
-				this.form = {
-					id: null,
-					name: "",
-					email: "",
-					specialization_id: null,
-					phone: "",
-					password: "", // Make sure password is blank for Add
-				};
-			},
-			formatDate(dateStr) {
-				if (!dateStr) return "-";
-				const d = new Date(dateStr);
-				return d.toLocaleDateString() + " " + d.toLocaleTimeString();
-			},
-		},
-	};
+	},
+};
 </script>
 
 <style scoped>
@@ -404,6 +516,17 @@
 		transition: background 0.2s;
 	}
 
+	.dm-badge-specialization {
+		background: linear-gradient(90deg, #10b981 0%, #38bdf8 100%);
+		color: #fff;
+		border-radius: 0.7rem;
+		padding: 0.45rem 1rem;
+		font-size: 0.95rem;
+		font-weight: 500;
+		display: inline-block;
+		box-shadow: 0 1px 4px #10b98122;
+	}
+
 	.dm-badge-active {
 		background: linear-gradient(90deg, #38bdf8 0%, #10b981 100%);
 		color: #fff;
@@ -483,8 +606,8 @@
 		max-width: 95vw;
 		width: 520px;
 		animation: slideUp 0.3s;
-		max-height: 80vh; /* Add this line */
-		overflow-y: auto; /* Add this line */
+		max-height: 80vh;
+		overflow-y: auto;
 	}
 
 	@keyframes slideUp {
@@ -532,6 +655,7 @@
 		background: #f8fafc;
 		box-shadow: 0 1px 4px #10b98111;
 		transition: border-color 0.2s, box-shadow 0.2s;
+		box-sizing: border-box;
 	}
 
 	.form-control:focus {
@@ -571,6 +695,24 @@
 		.dm-modal {
 			padding: 1rem;
 			min-width: 220px;
+		}
+	}
+
+	@media (max-width: 600px) {
+		.doctor-management-container {
+			padding: 0.5rem;
+		}
+		.dm-header h2 {
+			font-size: 1.3rem;
+		}
+		.dm-table th,
+		.dm-table td {
+			font-size: 0.85rem;
+			padding: 0.5rem 0.1rem;
+		}
+		.dm-modal {
+			width: 98vw;
+			padding: 0.5rem;
 		}
 	}
 </style>

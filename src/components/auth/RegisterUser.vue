@@ -134,8 +134,14 @@
             </select>
             <div class="invalid-feedback">Please select your role.</div>
           </div>
-          <button type="submit" class="btn btn-primary w-100 py-2 fw-bold mb-3">
-            Register <i class="bi bi-person-plus ms-2"></i>
+          <button type="submit" class="btn btn-primary w-100 py-2 fw-bold mb-3" :disabled="loading">
+            <span v-if="loading">
+              <i class="bi bi-hourglass-split me-2"></i>
+              Registering...
+            </span>
+            <span v-else>
+              Register <i class="bi bi-person-plus ms-2"></i>
+            </span>
           </button>
         </form>
         <div class="text-center mt-4 pt-2">
@@ -155,8 +161,6 @@
 </template>
 
 <script>
-import axios from "@/api/axios";
-
 export default {
   name: "RegisterUser",
   data() {
@@ -169,32 +173,174 @@ export default {
     };
   },
   methods: {
-    async handleRegister() {
+    generateUserId() {
+      return 'user_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+    },
+    
+    checkIfUserExists(email) {
+      const users = this.getAllUsers();
+      return users.some(user => user.email === email);
+    },
+    
+    getAllUsers() {
+      const users = localStorage.getItem('medicare_users');
+      return users ? JSON.parse(users) : [];
+    },
+    
+    saveUserToLocalStorage(userData) {
+      const users = this.getAllUsers();
+      users.push(userData);
+      localStorage.setItem('medicare_users', JSON.stringify(users));
+    },
+    
+    validateForm() {
       const form = document.querySelector(".needs-validation");
       if (!form.checkValidity()) {
         form.classList.add("was-validated");
+        return false;
+      }
+      
+      // Additional validation
+      if (this.password.length < 8) {
+        alert("Password must be at least 8 characters long!");
+        return false;
+      }
+      
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(this.email)) {
+        alert("Please enter a valid email address!");
+        return false;
+      }
+      
+      return true;
+    },
+    
+    async handleRegister() {
+      if (!this.validateForm()) {
         return;
       }
+      
       this.loading = true;
+      
       try {
-        await axios.post("/register", {
-          name: this.name,
-          email: this.email,
-          password: this.password,
+        // Check if user already exists
+        if (this.checkIfUserExists(this.email)) {
+          alert("User with this email already exists!");
+          return;
+        }
+        
+        // Create user data object
+        const userData = {
+          id: this.generateUserId(),
+          name: this.name.trim(),
+          email: this.email.toLowerCase().trim(),
+          password: this.password, // In real app, this should be hashed
           role: this.role,
-        });
-        alert("Registration successful!");
+          registeredAt: new Date().toISOString(),
+          isActive: true,
+          lastLogin: null
+        };
+        
+        // Save to localStorage
+        this.saveUserToLocalStorage(userData);
+        
+        // Save registration statistics
+        this.updateRegistrationStats();
+        
+        // Success message
+        alert(`Registration successful! Welcome ${this.name}!`);
+        
+        // Optional: Auto-login the user
+        this.autoLogin(userData);
+        
+        // Clear form
+        this.resetForm();
+        
+        // Redirect to login page
         this.$router.push("/");
+        
       } catch (error) {
-        alert(
-          error.response?.data?.message ||
-            "Registration failed. Please try again."
-        );
+        console.error('Registration error:', error);
+        alert("Registration failed. Please try again.");
       } finally {
         this.loading = false;
       }
     },
+    
+    updateRegistrationStats() {
+      const stats = JSON.parse(localStorage.getItem('medicare_stats') || '{}');
+      const today = new Date().toDateString();
+      
+      stats.totalRegistrations = (stats.totalRegistrations || 0) + 1;
+      stats.registrationsByDate = stats.registrationsByDate || {};
+      stats.registrationsByDate[today] = (stats.registrationsByDate[today] || 0) + 1;
+      stats.registrationsByRole = stats.registrationsByRole || {};
+      stats.registrationsByRole[this.role] = (stats.registrationsByRole[this.role] || 0) + 1;
+      
+      localStorage.setItem('medicare_stats', JSON.stringify(stats));
+    },
+    
+    autoLogin(userData) {
+      // Save current user session
+      const sessionData = {
+        id: userData.id,
+        name: userData.name,
+        email: userData.email,
+        role: userData.role,
+        loginTime: new Date().toISOString()
+      };
+      
+      localStorage.setItem('medicare_current_user', JSON.stringify(sessionData));
+      localStorage.setItem('medicare_auth_token', 'local_' + userData.id);
+      
+      // Update last login
+      const users = this.getAllUsers();
+      const userIndex = users.findIndex(user => user.id === userData.id);
+      if (userIndex !== -1) {
+        users[userIndex].lastLogin = new Date().toISOString();
+        localStorage.setItem('medicare_users', JSON.stringify(users));
+      }
+    },
+    
+    resetForm() {
+      this.name = "";
+      this.email = "";
+      this.password = "";
+      this.role = "";
+      
+      // Remove validation classes
+      const form = document.querySelector(".needs-validation");
+      if (form) {
+        form.classList.remove("was-validated");
+      }
+    },
+    
+    // Utility method to get user by email
+    getUserByEmail(email) {
+      const users = this.getAllUsers();
+      return users.find(user => user.email === email.toLowerCase().trim());
+    },
+    
+    // Method to get all users with specific role
+    getUsersByRole(role) {
+      const users = this.getAllUsers();
+      return users.filter(user => user.role === role);
+    }
   },
+  
+  mounted() {
+    // Initialize localStorage structure if not exists
+    if (!localStorage.getItem('medicare_users')) {
+      localStorage.setItem('medicare_users', '[]');
+    }
+    
+    if (!localStorage.getItem('medicare_stats')) {
+      localStorage.setItem('medicare_stats', '{}');
+    }
+    
+    // Log current users count for debugging
+    console.log('Total registered users:', this.getAllUsers().length);
+  }
 };
 </script>
 
@@ -273,6 +419,12 @@ export default {
   background: linear-gradient(90deg, #2563eb 0%, #1d4ed8 100%);
   transform: translateY(-2px);
   box-shadow: 0 6px 12px rgba(59, 130, 246, 0.3);
+}
+
+.btn-primary:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
 }
 
 .invalid-feedback {

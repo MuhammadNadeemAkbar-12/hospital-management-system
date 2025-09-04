@@ -83,8 +83,6 @@
 </template>
 
 <script>
-	import axios from "@/api/axios";
-
 	export default {
 		name: "AdminDashboard",
 		data() {
@@ -94,21 +92,9 @@
 			};
 		},
 		async created() {
-			try {
-				const token = localStorage.getItem("Token");
-				if (token) {
-					const response = await axios.get("/me", {
-						headers: {
-							Authorization: `Bearer ${token}`,
-						},
-					});
-					if (response.data && response.data.data && response.data.data.name) {
-						this.userName = response.data.data.name;
-					}
-				}
-			} catch (e) {
-				// Default naam hi rahe
-			}
+			// Dummy admin data
+			this.userName = "Admin User";
+			this.userRole = "Administrator";
 		},
 	};
 </script>

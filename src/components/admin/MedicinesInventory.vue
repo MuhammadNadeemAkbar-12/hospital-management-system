@@ -156,13 +156,92 @@
 </template>
 
 <script>
-	import axios from "@/api/axios";
-
 	export default {
 		name: "MedicinesInventory",
 		data() {
 			return {
-				medicines: [],
+				medicines: [
+					{
+						id: 1,
+						name: "Panadol",
+						batch: "BTH001",
+						expiry: "2025-12-15",
+						quantity: 150,
+						active: true,
+					},
+					{
+						id: 2,
+						name: "Augmentin",
+						batch: "BTH002",
+						expiry: "2025-02-10",
+						quantity: 8,
+						active: true,
+					},
+					{
+						id: 3,
+						name: "Arinac Forte",
+						batch: "BTH003",
+						expiry: "2025-08-20",
+						quantity: 75,
+						active: true,
+					},
+					{
+						id: 4,
+						name: "Brufen",
+						batch: "BTH004",
+						expiry: "2025-01-30",
+						quantity: 25,
+						active: true,
+					},
+					{
+						id: 5,
+						name: "Flagyl",
+						batch: "BTH005",
+						expiry: "2025-06-18",
+						quantity: 5,
+						active: true,
+					},
+					{
+						id: 6,
+						name: "Disprin",
+						batch: "BTH006",
+						expiry: "2025-11-12",
+						quantity: 200,
+						active: true,
+					},
+					{
+						id: 7,
+						name: "Calpol",
+						batch: "BTH007",
+						expiry: "2024-12-25",
+						quantity: 40,
+						active: true,
+					},
+					{
+						id: 8,
+						name: "Rifampicin",
+						batch: "BTH008",
+						expiry: "2025-09-05",
+						quantity: 120,
+						active: true,
+					},
+					{
+						id: 9,
+						name: "Omeprazole",
+						batch: "BTH009",
+						expiry: "2025-03-14",
+						quantity: 3,
+						active: true,
+					},
+					{
+						id: 10,
+						name: "Ciprofloxacin",
+						batch: "BTH010",
+						expiry: "2025-07-28",
+						quantity: 85,
+						active: true,
+					},
+				],
 				search: "",
 				showForm: false,
 				editMode: false,
@@ -176,6 +255,7 @@
 				},
 				showDeleteModal: false,
 				deleteTarget: {},
+				nextId: 11,
 			};
 		},
 		computed: {
@@ -190,62 +270,57 @@
 				);
 			},
 		},
-		created() {
-			this.fetchMedicines();
-		},
 		methods: {
-			async fetchMedicines() {
-				const token = localStorage.getItem("Token");
-				try {
-					const response = await axios.get("/admin/medicines", {
-						headers: { Authorization: `Bearer ${token}` },
-					});
-					console.log("Medicines API Response:", response.data); // <-- Add this line
-					this.medicines = response.data.data || [];
-				} catch (e) {
-					console.log("Medicines API Error:", e.response?.data || e.message); // <-- Add this line
-					this.medicines = [];
-				}
-			},
 			editMedicine(med) {
 				this.form = { ...med };
 				this.editMode = true;
 				this.showForm = true;
 			},
-			async saveMedicine() {
-				const token = localStorage.getItem("Token");
-				try {
+			saveMedicine() {
+				// Simulate API call delay
+				setTimeout(() => {
 					if (this.editMode) {
-						await axios.put(`/admin/medicines/${this.form.id}`, this.form, {
-							headers: { Authorization: `Bearer ${token}` },
-						});
+						// Update existing medicine
+						const index = this.medicines.findIndex(
+							(m) => m.id === this.form.id
+						);
+						if (index !== -1) {
+							this.medicines[index] = { ...this.form };
+						}
 					} else {
-						await axios.post("/admin/medicines", this.form, {
-							headers: { Authorization: `Bearer ${token}` },
-						});
+						// Add new medicine
+						const newMedicine = {
+							...this.form,
+							id: this.nextId++,
+						};
+						this.medicines.push(newMedicine);
 					}
-					this.fetchMedicines();
 					this.closeForm();
-				} catch (e) {
-					alert("Error saving medicine");
-				}
+					alert(
+						this.editMode
+							? "Medicine updated successfully!"
+							: "Medicine added successfully!"
+					);
+				}, 300);
 			},
 			confirmDelete(med) {
 				this.deleteTarget = med;
 				this.showDeleteModal = true;
 			},
-			async deleteMedicine() {
-				const token = localStorage.getItem("Token");
-				try {
-					await axios.delete(`/admin/medicines/${this.deleteTarget.id}`, {
-						headers: { Authorization: `Bearer ${token}` },
-					});
-					this.fetchMedicines();
+			deleteMedicine() {
+				// Simulate API call delay
+				setTimeout(() => {
+					// Set medicine as inactive instead of removing from array
+					const index = this.medicines.findIndex(
+						(m) => m.id === this.deleteTarget.id
+					);
+					if (index !== -1) {
+						this.medicines[index].active = false;
+					}
 					this.showDeleteModal = false;
 					this.deleteTarget = {};
-				} catch (e) {
-					alert("Error deleting medicine");
-				}
+					alert("Medicine deleted successfully!");
+				}, 300);
 			},
 			closeForm() {
 				this.showForm = false;
@@ -280,23 +355,43 @@
 				const diff = (exp - today) / (1000 * 60 * 60 * 24);
 				return diff < 30 && diff > 0;
 			},
-			async exportExcel() {
-				const token = localStorage.getItem("Token");
-				try {
-					const response = await axios.get("/admin/medicines/export", {
-						headers: { Authorization: `Bearer ${token}` },
-						responseType: "blob",
-					});
-					const url = window.URL.createObjectURL(new Blob([response.data]));
-					const link = document.createElement("a");
-					link.href = url;
-					link.setAttribute("download", "medicines_inventory.xlsx");
+			exportExcel() {
+				// Simulate Excel export
+				const csvContent = this.generateCSV();
+				const blob = new Blob([csvContent], {
+					type: "text/csv;charset=utf-8;",
+				});
+				const link = document.createElement("a");
+
+				if (link.download !== undefined) {
+					const url = URL.createObjectURL(blob);
+					link.setAttribute("href", url);
+					link.setAttribute("download", "medicines_inventory.csv");
+					link.style.visibility = "hidden";
 					document.body.appendChild(link);
 					link.click();
-					link.remove();
-				} catch (e) {
-					alert("Error exporting Excel");
+					document.body.removeChild(link);
 				}
+
+				alert("Inventory exported successfully!");
+			},
+			generateCSV() {
+				const headers = ["Name", "Batch", "Expiry", "Quantity", "Status"];
+				const activeMedicines = this.medicines.filter((m) => m.active);
+
+				let csvContent = headers.join(",") + "\n";
+
+				activeMedicines.forEach((med) => {
+					const status = this.isLowStock(med)
+						? "Low Stock"
+						: this.isNearExpiry(med)
+						? "Near Expiry"
+						: "OK";
+					const row = [med.name, med.batch, med.expiry, med.quantity, status];
+					csvContent += row.join(",") + "\n";
+				});
+
+				return csvContent;
 			},
 		},
 	};
@@ -573,6 +668,32 @@
 		margin-top: 1.2rem;
 	}
 
+	.form-group {
+		margin-bottom: 1rem;
+	}
+
+	.form-group label {
+		display: block;
+		margin-bottom: 0.5rem;
+		font-weight: 600;
+		color: #374151;
+	}
+
+	.form-control {
+		width: 100%;
+		padding: 0.75rem;
+		border: 1px solid #d1d5db;
+		border-radius: 0.5rem;
+		font-size: 1rem;
+		transition: border-color 0.2s;
+	}
+
+	.form-control:focus {
+		outline: none;
+		border-color: #f59e0b;
+		box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.1);
+	}
+
 	@media (max-width: 900px) {
 		.medicines-inventory-card {
 			padding: 1.2rem 0.5rem;
@@ -588,6 +709,15 @@
 		.mi-table td {
 			font-size: 0.95rem;
 			padding: 0.6rem 0.4rem;
+		}
+
+		.mi-actions {
+			flex-direction: column;
+			align-items: stretch;
+		}
+
+		.mi-search {
+			width: 100%;
 		}
 	}
 </style>

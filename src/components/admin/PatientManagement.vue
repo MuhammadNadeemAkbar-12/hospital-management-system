@@ -37,7 +37,7 @@
 							<td>
 								<img
 									v-if="patient.profile_picture"
-									:src="profilePicUrl(patient.profile_picture)"
+									:src="patient.profile_picture"
 									alt="Profile"
 									class="pm-profile-pic" />
 								<span v-else class="pm-profile-placeholder">
@@ -105,7 +105,7 @@
 								required
 								class="form-control" />
 						</div>
-						<div class="form-group">
+						<div class="form-group" v-if="!editMode">
 							<label>Password</label>
 							<input
 								v-model="form.password"
@@ -113,7 +113,7 @@
 								required
 								class="form-control" />
 						</div>
-						<div class="form-group">
+						<div class="form-group" v-if="!editMode">
 							<label>Confirm Password</label>
 							<input
 								v-model="form.password_confirmation"
@@ -154,30 +154,19 @@
 								class="form-control" />
 						</div>
 						<div class="form-group">
-							<label>Profile Picture</label>
+							<label>Profile Picture (URL)</label>
 							<input
-								type="file"
-								@change="onProfilePictureChange"
-								accept="image/*"
-								required
+								v-model="form.profile_picture_url"
+								type="url"
+								placeholder="https://example.com/profile.jpg"
 								class="form-control" />
 						</div>
 						<div class="form-group">
 							<label>Medical History Description</label>
-							<input
+							<textarea
 								v-model="form.medical_history_description"
-								type="text"
-								required
-								class="form-control" />
-						</div>
-						<div class="form-group">
-							<label>Medical History Document</label>
-							<input
-								type="file"
-								@change="onMedicalDocumentChange"
-								accept=".pdf,.jpg,.jpeg,.png,.docx"
-								required
-								class="form-control" />
+								rows="3"
+								class="form-control"></textarea>
 						</div>
 						<div class="pm-modal-actions">
 							<button class="pm-btn" type="submit">
@@ -198,186 +187,216 @@
 </template>
 
 <script>
-	import axios from "@/api/axios";
-
-	export default {
-		name: "PatientManagement",
-		data() {
-			return {
-				patients: [],
-				search: "",
-				showForm: false,
-				editMode: false,
-				form: {
-					id: null,
-					name: "",
-					email: "",
-					password: "",
-					password_confirmation: "",
-					dob: "",
-					gender: "",
-					address: "",
-					phone: "",
-					profile_picture: null,
-					medical_history_description: "",
-					medical_history_document: null,
+export default {
+	name: "PatientManagement",
+	data() {
+		return {
+			patients: [
+				{
+					id: 1,
+					name: "Ahmed Khan",
+					email: "ahmed.khan@email.com",
+					phone: "+92-300-1234567",
+					gender: "male",
+					dob: "1990-05-15",
+					address: "Gulberg III, Lahore",
+					profile_picture: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&h=150&fit=crop&crop=face",
+					created_at: "2024-01-15T10:30:00Z",
+					medical_history: "No major medical issues"
 				},
-			};
-		},
-		computed: {
-			filteredPatients() {
-				if (!this.search) return this.patients;
-				const s = this.search.toLowerCase();
-				return this.patients.filter(
-					(p) =>
-						p.name.toLowerCase().includes(s) ||
-						p.email.toLowerCase().includes(s) ||
-						(p.phone && p.phone.toLowerCase().includes(s))
-				);
-			},
-		},
-		created() {
-			this.fetchPatients();
-		},
-		methods: {
-			async fetchPatients() {
-				try {
-					const token = localStorage.getItem("Token");
-					const response = await axios.get("/admin/patients", {
-						headers: { Authorization: `Bearer ${token}` },
-					});
-					this.patients = response.data.data || [];
-				} catch (e) {
-					this.patients = [];
-				}
-			},
-			profilePicUrl(pic) {
-				// Backend ke hisaab se base URL set karein
-				return pic ? "http://192.168.12.187:8000" + pic : "";
-			},
-			formatDate(dateStr) {
-				if (!dateStr) return "-";
-				const d = new Date(dateStr);
-				return d.toLocaleDateString() + " " + d.toLocaleTimeString();
-			},
-			editPatient(patient) {
-				// Patient data form me set karein
-				this.form = {
-					id: patient.id,
-					name: patient.name,
-					email: patient.email,
-					dob: patient.dob,
-					gender: patient.gender,
-					address: patient.address,
-					phone: patient.phone,
-					profile_picture: null, // File edit ke liye blank rakhein
-					medical_history_description: "",
-					medical_history_document: null,
-					password: "",
-					password_confirmation: "",
-				};
-				this.editMode = true;
-				this.showForm = true;
-			},
-			async savePatient() {
-				const token = localStorage.getItem("Token");
-				try {
-					const formData = new FormData();
-					formData.append("name", this.form.name);
-					formData.append("email", this.form.email);
-					formData.append("dob", this.form.dob);
-					formData.append("gender", this.form.gender);
-					formData.append("address", this.form.address);
-					formData.append("phone", this.form.phone);
-					if (this.form.profile_picture) {
-						formData.append("profile_picture", this.form.profile_picture);
-					}
-					if (this.form.medical_history_description) {
-						formData.append(
-							"medical_histories[0][description]",
-							this.form.medical_history_description
-						);
-					}
-					if (this.form.medical_history_document) {
-						formData.append(
-							"medical_histories[0][document]",
-							this.form.medical_history_document
-						);
-					}
-					// Only add password fields if not editing
-					if (!this.editMode) {
-						formData.append("password", this.form.password);
-						formData.append(
-							"password_confirmation",
-							this.form.password_confirmation
-						);
-					}
-					if (this.editMode) {
-						await axios.post(
-							`/admin/patients/${this.form.id}?_method=PUT`,
-							formData,
-							{
-								headers: {
-									Authorization: `Bearer ${token}`,
-									"Content-Type": "multipart/form-data",
-								},
-							}
-						);
-					} else {
-						await axios.post("/admin/patients", formData, {
-							headers: {
-								Authorization: `Bearer ${token}`,
-								"Content-Type": "multipart/form-data",
-							},
-						});
-					}
-					this.fetchPatients();
-					this.closeForm();
-				} catch (e) {
-					console.log(
-						"Add/Edit Patient Error:",
-						e.response?.data.errors || e.message
-					);
-					alert("Error saving patient");
-				}
-			},
-			async softDelete(patient) {
-				const token = localStorage.getItem("Token");
-				try {
-					await axios.delete(`/admin/patients/${patient.id}`, {
-						headers: { Authorization: `Bearer ${token}` },
-					});
-					this.fetchPatients();
-				} catch (e) {
-					alert("Error deleting patient");
-				}
-			},
-			closeForm() {
-				this.showForm = false;
-				this.editMode = false;
-				this.form = {
-					id: null,
-					name: "",
-					email: "",
-					password: "",
-					password_confirmation: "",
-					dob: "",
-					gender: "",
-					address: "",
-					phone: "",
+				{
+					id: 2,
+					name: "Fatima Ali",
+					email: "fatima.ali@email.com",
+					phone: "+92-301-2345678",
+					gender: "female",
+					dob: "1985-08-22",
+					address: "DHA Phase 5, Lahore",
+					profile_picture: "https://images.unsplash.com/photo-1494790108755-2616b612b786?w=150&h=150&fit=crop&crop=face",
+					created_at: "2024-01-20T14:15:00Z",
+					medical_history: "Diabetes Type 2"
+				},
+				{
+					id: 3,
+					name: "Muhammad Hassan",
+					email: "m.hassan@email.com",
+					phone: "+92-302-3456789",
+					gender: "male",
+					dob: "1988-12-03",
+					address: "Johar Town, Lahore",
 					profile_picture: null,
-					medical_history_description: "",
-					medical_history_document: null,
-				};
+					created_at: "2024-02-01T09:20:00Z",
+					medical_history: "Hypertension"
+				},
+				{
+					id: 4,
+					name: "Aisha Malik",
+					email: "aisha.malik@email.com",
+					phone: "+92-303-4567890",
+					gender: "female",
+					dob: "1992-03-10",
+					address: "Model Town, Lahore",
+					profile_picture: "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=150&h=150&fit=crop&crop=face",
+					created_at: "2024-02-10T16:45:00Z",
+					medical_history: "Allergies to penicillin"
+				},
+				{
+					id: 5,
+					name: "Omar Sheikh",
+					email: "omar.sheikh@email.com",
+					phone: "+92-304-5678901",
+					gender: "male",
+					dob: "1995-07-18",
+					address: "Cantt Area, Lahore",
+					profile_picture: null,
+					created_at: "2024-02-15T11:30:00Z",
+					medical_history: "No significant medical history"
+				}
+			],
+			search: "",
+			showForm: false,
+			editMode: false,
+			form: {
+				id: null,
+				name: "",
+				email: "",
+				password: "",
+				password_confirmation: "",
+				dob: "",
+				gender: "",
+				address: "",
+				phone: "",
+				profile_picture_url: "",
+				medical_history_description: "",
 			},
-			onProfilePictureChange(e) {
-				this.form.profile_picture = e.target.files[0];
-			},
-			onMedicalDocumentChange(e) {
-				this.form.medical_history_document = e.target.files[0];
-			},
+			nextId: 6 // For generating new IDs
+		};
+	},
+	computed: {
+		filteredPatients() {
+			if (!this.search) return this.patients;
+			const s = this.search.toLowerCase();
+			return this.patients.filter(
+				(p) =>
+					p.name.toLowerCase().includes(s) ||
+					p.email.toLowerCase().includes(s) ||
+					(p.phone && p.phone.toLowerCase().includes(s))
+			);
 		},
-	};
+	},
+	methods: {
+		formatDate(dateStr) {
+			if (!dateStr) return "-";
+			const d = new Date(dateStr);
+			return d.toLocaleDateString() + " " + d.toLocaleTimeString();
+		},
+		editPatient(patient) {
+			// Patient data form me set karein
+			this.form = {
+				id: patient.id,
+				name: patient.name,
+				email: patient.email,
+				dob: patient.dob,
+				gender: patient.gender,
+				address: patient.address,
+				phone: patient.phone,
+				profile_picture_url: patient.profile_picture || "",
+				medical_history_description: patient.medical_history || "",
+				password: "",
+				password_confirmation: "",
+			};
+			this.editMode = true;
+			this.showForm = true;
+		},
+		savePatient() {
+			try {
+				// Validate form data
+				if (!this.editMode) {
+					if (this.form.password !== this.form.password_confirmation) {
+						alert("Passwords do not match!");
+						return;
+					}
+				}
+
+				// Check if email already exists (except for current patient in edit mode)
+				const emailExists = this.patients.some(p => 
+					p.email === this.form.email && 
+					(!this.editMode || p.id !== this.form.id)
+				);
+				
+				if (emailExists) {
+					alert("Email already exists!");
+					return;
+				}
+
+				if (this.editMode) {
+					// Update existing patient
+					const patientIndex = this.patients.findIndex(p => p.id === this.form.id);
+					if (patientIndex !== -1) {
+						this.patients[patientIndex] = {
+							...this.patients[patientIndex],
+							name: this.form.name,
+							email: this.form.email,
+							dob: this.form.dob,
+							gender: this.form.gender,
+							address: this.form.address,
+							phone: this.form.phone,
+							profile_picture: this.form.profile_picture_url || null,
+							medical_history: this.form.medical_history_description
+						};
+					}
+				} else {
+					// Add new patient
+					const newPatient = {
+						id: this.nextId++,
+						name: this.form.name,
+						email: this.form.email,
+						dob: this.form.dob,
+						gender: this.form.gender,
+						address: this.form.address,
+						phone: this.form.phone,
+						profile_picture: this.form.profile_picture_url || null,
+						medical_history: this.form.medical_history_description,
+						created_at: new Date().toISOString()
+					};
+					this.patients.push(newPatient);
+				}
+
+				this.closeForm();
+				alert(this.editMode ? "Patient updated successfully!" : "Patient added successfully!");
+			} catch (e) {
+				console.error("Save Patient Error:", e);
+				alert("Error saving patient");
+			}
+		},
+		softDelete(patient) {
+			if (confirm(`Are you sure you want to delete ${patient.name}?`)) {
+				const patientIndex = this.patients.findIndex(p => p.id === patient.id);
+				if (patientIndex !== -1) {
+					this.patients.splice(patientIndex, 1);
+					alert("Patient deleted successfully!");
+				}
+			}
+		},
+		closeForm() {
+			this.showForm = false;
+			this.editMode = false;
+			this.form = {
+				id: null,
+				name: "",
+				email: "",
+				password: "",
+				password_confirmation: "",
+				dob: "",
+				gender: "",
+				address: "",
+				phone: "",
+				profile_picture_url: "",
+				medical_history_description: "",
+			};
+		}
+	},
+};
 </script>
 
 <style scoped>
@@ -611,8 +630,8 @@
 		max-width: 95vw;
 		width: 520px;
 		animation: slideUp 0.3s;
-		max-height: 80vh; /* Add this line */
-		overflow-y: auto; /* Add this line */
+		max-height: 80vh;
+		overflow-y: auto;
 	}
 
 	@keyframes slideUp {
@@ -660,6 +679,7 @@
 		background: #f8fafc;
 		box-shadow: 0 1px 4px #2563eb11;
 		transition: border-color 0.2s, box-shadow 0.2s;
+		box-sizing: border-box;
 	}
 
 	.form-control:focus {
