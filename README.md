@@ -398,9 +398,11 @@ Output goes to `dist/`.
 
 Lint:
 
-```bash
-npm run lint
-```
+## 🔗 Live Demo
+
+The frontend is deployed on Vercel and available at:
+
+hospital-management-system-blond.vercel.app
 
 ## 🗄️ State Management (Vuex)
 
