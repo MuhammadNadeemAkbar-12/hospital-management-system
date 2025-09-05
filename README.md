@@ -398,6 +398,12 @@ Output goes to `dist/`.
 
 Lint:
 
+## 🔗 Live Demo
+
+The frontend is deployed on Vercel and available at:
+
+hospital-management-system-blond.vercel.app
+
 ```bash
 npm run lint
 ```
